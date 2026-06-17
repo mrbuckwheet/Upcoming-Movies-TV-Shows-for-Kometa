@@ -1,0 +1,75 @@
+services:
+  kometa:
+    image: kometateam/kometa:latest
+    container_name: kometa
+    user: ${USER_ID}:${GROUP_ID}
+    environment:
+      - TZ=${TIME_ZONE}
+      - KOMETA_TIMES=07:00,19:00
+    volumes:
+      - ${CONTAINER_FOLDER_PATH}/Kometa:/config
+    restart: unless-stopped
+    hostname: kometa
+    networks: 
+      - External
+
+  umtk:
+    image: netplexflix/umtk:latest
+    container_name: umtk
+    ports:
+      - "2120:2120" # Web UI
+    environment:
+      - CRON=0 2 * * * # Run daily at 2am (used as initial default only)
+      # - SCHEDULE_HOURS=24 # Alternative: run every X hours instead of a cron expression
+      - DOCKER=true
+      - TZ=${TIME_ZONE}
+      - PUID=${USER_ID}
+      - PGID=${GROUP_ID}
+    #extra_hosts:
+      #- "host.docker.internal:host-gateway" # Alternative way to access host
+    volumes:
+      # Configuration directory (required)
+      - ${CONTAINER_FOLDER_PATH}/UMTK:/app/config
+
+      # Video directory for placeholder method
+      - ${MEDIA_FOLDER_PATH}/UMTK/Coming Soon:/video
+
+      # Output directory for generated YAML files (required)
+      - ${CONTAINER_FOLDER_PATH}/Kometa/UMTK:/app/kometa
+
+      # UMTK root folders
+      - ${MEDIA_FOLDER_PATH}/UMTK/Movies:/umtkmovies
+      - ${MEDIA_FOLDER_PATH}/UMTK/TV Shows:/umtktv
+
+    restart: unless-stopped
+    hostname: umtk
+    networks: 
+      - External
+      
+  dv-tagger:
+    image: mrbuckwheet/dolbyvision-tagger:latest
+    container_name: dolbyvision-tagger
+    ports:
+      - "3636:3636"
+    environment:
+      - TZ=${TZ}
+      - PUID=${USER_ID}
+      - PGID=${GROUP_ID}
+    volumes:
+      - ${MEDIA_FOLDER_PATH}/Movies:/Movies                           # Path to Movies Library
+      - ${CONTAINER_FOLDER_PATH}/DV-Tagger:/app/config                # Where your settings and logs will be saved
+    restart: unless-stopped
+    hostname: dv-tagger
+    networks: 
+      - External
+
+networks:
+  External:
+    external: true
+
+#### ENV VARIABLES USED ####
+#CONTAINER_FOLDER_PATH=
+#USER_ID=
+#GROUP_ID=
+#TIME_ZONE=
+#MEDIA_FOLDER_PATH=
